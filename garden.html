@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Quiet Garden</title>
+  <style>
+    :root { --ui: 14px; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:#0b1020; color:#e9ecff; }
+    header {
+      display:flex; gap:10px; align-items:center; justify-content:space-between;
+      padding:14px 16px; position:sticky; top:0; background:rgba(11,16,32,.85); backdrop-filter: blur(10px);
+      border-bottom:1px solid rgba(255,255,255,.08);
+    }
+    .btn {
+      font-size: var(--ui); padding:8px 10px; border-radius:10px;
+      border:1px solid rgba(255,255,255,.16); background:rgba(255,255,255,.06);
+      color:#e9ecff; cursor:pointer;
+    }
+    .btn:hover { background:rgba(255,255,255,.10); }
+    .wrap { display:grid; grid-template-columns: 1fr 320px; gap:14px; padding:14px; }
+    @media (max-width: 900px) { .wrap { grid-template-columns:1fr; } }
+
+    /* Garden */
+    #garden {
+      height: 72vh; min-height: 520px; border-radius:18px; position:relative; overflow:hidden;
+      border:1px solid rgba(255,255,255,.10);
+      background:
+        radial-gradient(900px 500px at 20% 10%, rgba(153,108,255,.18), transparent 60%),
+        radial-gradient(700px 400px at 85% 20%, rgba(0,255,214,.10), transparent 60%),
+        linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,0)),
+        radial-gradient(1200px 700px at 50% 110%, #2b1f14 0%, #1b140f 45%, #0e0a07 100%);
+      cursor: crosshair;
+    }
+    .hint {
+      position:absolute; left:14px; bottom:14px; font-size:12px; opacity:.7;
+      background:rgba(0,0,0,.25); border:1px solid rgba(255,255,255,.10);
+      padding:8px 10px; border-radius:12px;
+    }
+
+    /* Flowers (CSS-only “sprites”) */
+    .flower {
+      position:absolute; width:36px; height:36px; transform: translate(-50%,-70%);
+      user-select:none;
+    }
+    .stem {
+      position:absolute; left:50%; bottom:-34px; width:4px; height:38px; transform:translateX(-50%);
+      border-radius:99px;
+      background: linear-gradient(180deg, rgba(120,255,170,.9), rgba(30,120,70,.9));
+      filter: drop-shadow(0 10px 14px rgba(0,0,0,.35));
+      transform-origin: bottom;
+      animation: sway 3.5s ease-in-out infinite;
+    }
+    @keyframes sway { 0%,100% { transform: translateX(-50%) rotate(-2deg); } 50% { transform: translateX(-50%) rotate(2deg);} }
+
+    .head {
+      position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+      width:22px; height:22px; border-radius:50%;
+      background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.9), rgba(255,255,255,0) 35%),
+                  radial-gradient(circle at 50% 55%, var(--c1), var(--c2));
+      border:1px solid rgba(255,255,255,.20);
+      box-shadow: 0 0 18px rgba(180,140,255,.20);
+    }
+
+    .stage-0 .head { transform: translate(-50%,-50%) scale(.35); opacity:.75; }
+    .stage-1 .head { transform: translate(-50%,-50%) scale(.70); opacity:.90; }
+    .stage-2 .head { transform: translate(-50%,-50%) scale(1.00); opacity:1; box-shadow: 0 0 22px rgba(255,255,255,.18); }
+
+    .flower:hover .head { box-shadow: 0 0 28px rgba(255,255,255,.30); }
+    .picked { opacity:.35; filter: grayscale(.2); }
+
+    /* Side panel */
+    .panel {
+      border:1px solid rgba(255,255,255,.10); border-radius:18px; overflow:hidden;
+      background:rgba(255,255,255,.04);
+    }
+    .panel h3 { margin:0; padding:12px 14px; border-bottom:1px solid rgba(255,255,255,.10); font-size:14px; opacity:.9; }
+    .panel .content { padding:12px 14px; display:flex; flex-direction:column; gap:10px; }
+    .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    input[type="text"] {
+      width:100%; padding:10px 12px; border-radius:12px;
+      border:1px solid rgba(255,255,255,.14); background:rgba(0,0,0,.20); color:#e9ecff;
+      outline:none;
+    }
+    .small { font-size:12px; opacity:.75; line-height:1.35; }
+
+    /* Bouquet */
+    #bouquet {
+      display:flex; gap:8px; flex-wrap:wrap;
+      padding:10px; border-radius:14px;
+      border:1px dashed rgba(255,255,255,.18);
+      min-height:64px;
+      background: rgba(0,0,0,.18);
+    }
+    .bloom-chip {
+      width:42px; height:42px; border-radius:14px;
+      border:1px solid rgba(255,255,255,.18);
+      background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.9), rgba(255,255,255,0) 35%),
+                  radial-gradient(circle at 50% 55%, var(--c1), var(--c2));
+      cursor: grab;
+    }
+    .bloom-chip:active { cursor: grabbing; }
+    .divider { height:1px; background:rgba(255,255,255,.10); margin:8px 0; }
+  </style>
+</head>
+<body>
+<header>
+  <div style="display:flex;flex-direction:column;gap:2px">
+    <div style="font-weight:650; letter-spacing:.2px">Quiet Garden</div>
+    <div style="font-size:12px; opacity:.7">Plant feelings. Let them become something.</div>
+  </div>
+  <div class="row">
+    <button class="btn" id="clearBtn">Clear</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div id="garden" aria-label="garden">
+    <div class="hint">Click to plant • click a bloom to pick into bouquet</div>
+  </div>
+
+  <aside class="panel">
+    <h3>Bouquet</h3>
+    <div class="content">
+      <div id="bouquet" aria-label="bouquet dropzone"></div>
+      <button class="btn" id="saveBouquetBtn">Save bouquet</button>
+      <div class="divider"></div>
+
+      <div style="display:flex; flex-direction:column; gap:8px">
+        <div style="font-weight:600; font-size:13px">Optional note for next seed</div>
+        <input id="noteInput" type="text" maxlength="120" placeholder="One line only (optional)..." />
+        <div class="small">
+          Nothing here is a “mood score.” It’s just planting. Everything grows.
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div style="display:flex; flex-direction:column; gap:6px">
+        <div style="font-weight:600; font-size:13px">Saved bouquets</div>
+        <div id="savedList" class="small"></div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script>
+  const GROW_MS = 1000 * 60 * 3; // 3 minutes per stage (tweak)
+  const garden = document.getElementById('garden');
+  const bouquet = document.getElementById('bouquet');
+  const noteInput = document.getElementById('noteInput');
+  const savedList = document.getElementById('savedList');
+
+  const storeKey = 'quiet_garden_v1';
+  const storeBouquetsKey = 'quiet_garden_bouquets_v1';
+
+  /** @type {{id:string,x:number,y:number,created:number,c1:string,c2:string,note:string,picked:boolean}[]} */
+  let seeds = load(storeKey, []);
+  /** @type {{ts:number,flowerIds:string[]}[]} */
+  let bouquets = load(storeBouquetsKey, []);
+
+  function load(key, fallback){
+    try { return JSON.parse(localStorage.getItem(key)) ?? fallback; }
+    catch { return fallback; }
+  }
+  function save(key, value){ localStorage.setItem(key, JSON.stringify(value)); }
+
+  function randColorPair(){
+    // calm-ish palette via HSL
+    const h = Math.floor(Math.random()*360);
+    const c1 = `hsl(${h} 85% 70%)`;
+    const c2 = `hsl(${(h+25)%360} 75% 55%)`;
+    return [c1,c2];
+  }
+
+  function stageOf(seed){
+    const age = Date.now() - seed.created;
+    if (age < GROW_MS) return 0;
+    if (age < GROW_MS*2) return 1;
+    return 2;
+  }
+
+  function render(){
+    // Clear existing flowers
+    garden.querySelectorAll('.flower').forEach(el => el.remove());
+
+    for (const s of seeds){
+      const el = document.createElement('div');
+      el.className = `flower stage-${stageOf(s)} ${s.picked ? 'picked' : ''}`;
+      el.style.left = (s.x * 100) + '%';
+      el.style.top  = (s.y * 100) + '%';
+      el.style.setProperty('--c1', s.c1);
+      el.style.setProperty('--c2', s.c2);
+      el.dataset.id = s.id;
+
+      el.innerHTML = `
+        <div class="head" title="${escapeHtml(s.note || '')}"></div>
+        <div class="stem"></div>
+      `;
+
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const st = stageOf(s);
+        if (st < 2) return;               // only pick blooms
+        if (s.picked) return;
+        s.picked = true;
+        addToBouquet(s);
+        persist();
+        render();
+      });
+
+      // Right-click to view note quickly
+      el.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        if (s.note) alert(s.note);
+      });
+
+      garden.appendChild(el);
+    }
+
+    renderSavedBouquets();
+  }
+
+  function persist(){
+    save(storeKey, seeds);
+    save(storeBouquetsKey, bouquets);
+  }
+
+  function addToBouquet(seed){
+    const chip = document.createElement('div');
+    chip.className = 'bloom-chip';
+    chip.style.setProperty('--c1', seed.c1);
+    chip.style.setProperty('--c2', seed.c2);
+    chip.draggable = true;
+    chip.dataset.id = seed.id;
+
+    chip.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('text/plain', seed.id);
+    });
+
+    bouquet.appendChild(chip);
+  }
+
+  bouquet.addEventListener('dragover', (e) => e.preventDefault());
+  bouquet.addEventListener('drop', (e) => {
+    e.preventDefault();
+    const id = e.dataTransfer.getData('text/plain');
+    const chip = [...bouquet.children].find(c => c.dataset.id === id);
+    if (chip) bouquet.appendChild(chip); // move to end (simple reorder)
+  });
+
+  garden.addEventListener('click', (e) => {
+    const rect = garden.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+
+    const [c1,c2] = randColorPair();
+    const seed = {
+      id: crypto.randomUUID(),
+      x: clamp(x, 0.05, 0.95),
+      y: clamp(y, 0.12, 0.92),
+      created: Date.now(),
+      c1, c2,
+      note: (noteInput.value || '').trim(),
+      picked: false
+    };
+    noteInput.value = '';
+    seeds.push(seed);
+    persist();
+    render();
+  });
+
+  document.getElementById('saveBouquetBtn').addEventListener('click', () => {
+    const ids = [...bouquet.children].map(c => c.dataset.id).filter(Boolean);
+    if (!ids.length) return;
+
+    bouquets.unshift({ ts: Date.now(), flowerIds: ids });
+    // empty bouquet strip but keep picked flowers in garden as “harvested”
+    bouquet.innerHTML = '';
+    persist();
+    renderSavedBouquets();
+  });
+
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    localStorage.removeItem(storeKey);
+    localStorage.removeItem(storeBouquetsKey);
+    seeds = [];
+    bouquets = [];
+    bouquet.innerHTML = '';
+    render();
+  });
+
+  function renderSavedBouquets(){
+    if (!bouquets.length) { savedList.textContent = 'None yet.'; return; }
+    savedList.innerHTML = bouquets.slice(0, 6).map(b => {
+      const d = new Date(b.ts);
+      const label = d.toLocaleString(undefined, { month:'short', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+      return `• ${label} — ${b.flowerIds.length} blooms`;
+    }).join('<br/>');
+  }
+
+  function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
+  function escapeHtml(s){
+    return s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'","&#039;");
+  }
+
+  // Tick growth stages
+  setInterval(render, 1500);
+
+  // On load: also rebuild bouquet strip? (keep it empty for “new bouquet each time”)
+  render();
+</script>
+</body>
+</html>

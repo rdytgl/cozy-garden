@@ -53,21 +53,99 @@
     }
     @keyframes sway { 0%,100% { transform: translateX(-50%) rotate(-2deg); } 50% { transform: translateX(-50%) rotate(2deg);} }
 
-    .head {
-      position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-      width:22px; height:22px; border-radius:50%;
-      background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.9), rgba(255,255,255,0) 35%),
-                  radial-gradient(circle at 50% 55%, var(--c1), var(--c2));
-      border:1px solid rgba(255,255,255,.20);
-      box-shadow: 0 0 18px rgba(180,140,255,.20);
+    /* Bloom container (replaces .head) */
+    .bloom{
+      position:absolute;
+      left:50%; top:50%;
+      width:28px; height:28px;
+      transform:translate(-50%,-50%);
+      filter: drop-shadow(0 0 14px rgba(255,255,255,.14));
     }
 
-    .stage-0 .head { transform: translate(-50%,-50%) scale(.35); opacity:.75; }
-    .stage-1 .head { transform: translate(-50%,-50%) scale(.70); opacity:.90; }
-    .stage-2 .head { transform: translate(-50%,-50%) scale(1.00); opacity:1; box-shadow: 0 0 22px rgba(255,255,255,.18); }
+    /* Base petal */
+    .petal{
+      position:absolute;
+      left:50%; top:50%;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.18);
+      background:
+        radial-gradient(circle at 30% 35%, rgba(255,255,255,.70), rgba(255,255,255,0) 45%),
+        linear-gradient(135deg, var(--c1), var(--c2));
+      opacity: .96;
+    }
 
-    .flower:hover .head { box-shadow: 0 0 28px rgba(255,255,255,.30); }
-    .picked { opacity:.35; filter: grayscale(.2); }
+    /* Center */
+    .center{
+      position:absolute;
+      left:50%; top:50%;
+      width:10px; height:10px;
+      transform:translate(-50%,-50%);
+      border-radius:50%;
+      border:1px solid rgba(255,255,255,.18);
+      background: radial-gradient(circle at 35% 35%, rgba(255,255,255,.9),
+                rgba(255,210,120,.95) 45%, rgba(120,60,20,.9));
+    }
+
+    /* Growth stages: scale the bloom */
+    .stage-0 .bloom { transform: translate(-50%,-50%) scale(.35); opacity:.75; }
+    .stage-1 .bloom { transform: translate(-50%,-50%) scale(.70); opacity:.90; }
+    .stage-2 .bloom { transform: translate(-50%,-50%) scale(1.00); opacity:1; }
+
+    /* --------------------
+      Variety 0: DAISY (8 petals)
+    -------------------- */
+    .daisy .petal{
+      width:18px; height:9px;
+      transform-origin: left center;
+      transform: translate(-22%, -50%) rotate(var(--r));
+    }
+    .daisy .p1{ --r: 0deg; }
+    .daisy .p2{ --r: 45deg; }
+    .daisy .p3{ --r: 90deg; }
+    .daisy .p4{ --r: 135deg; }
+    .daisy .p5{ --r: 180deg; }
+    .daisy .p6{ --r: 225deg; }
+    .daisy .p7{ --r: 270deg; }
+    .daisy .p8{ --r: 315deg; }
+
+    /* --------------------
+      Variety 1: TULIP (3 petals)
+    -------------------- */
+    .tulip .petal{
+      width:16px; height:14px;
+      border-radius: 14px 14px 18px 18px; /* more cup-like */
+      transform-origin: center bottom;
+      transform: translate(-50%, -70%) rotate(var(--r));
+      filter: saturate(1.05);
+    }
+    .tulip .t1{ --r: -18deg; }
+    .tulip .t2{ --r: 0deg;  }
+    .tulip .t3{ --r: 18deg; }
+    .tulip .center{
+      width:8px; height:8px;
+      transform: translate(-50%,-35%);
+      opacity:.9;
+    }
+
+    /* --------------------
+      Variety 2: STARFLOWER (5 petals, pointier)
+    -------------------- */
+    .star .petal{
+      width:18px; height:8px;
+      border-radius: 999px 999px 999px 0;  /* pointy tip illusion */
+      transform-origin: left center;
+      transform: translate(-22%, -50%) rotate(var(--r));
+    }
+    .star .s1{ --r: 18deg; }
+    .star .s2{ --r: 90deg; }
+    .star .s3{ --r: 162deg; }
+    .star .s4{ --r: 234deg; }
+    .star .s5{ --r: 306deg; }
+    .star .center{
+      width:9px; height:9px;
+      background: radial-gradient(circle at 35% 35%, rgba(255,255,255,.9),
+                rgba(170,220,255,.95) 45%, rgba(40,80,120,.9));
+    }
 
     /* Side panel */
     .panel {
@@ -179,6 +257,40 @@
     return 2;
   }
 
+  function bloomHTML(s) {
+  const title = escapeHtml(s.note || "");
+
+  // Variety 0: Daisy-ish (8 petals)
+  if (s.variety === 0) {
+    return `
+      <div class="bloom daisy" title="${title}">
+        ${Array.from({ length: 8 }, (_, i) => `<div class="petal p${i+1}"></div>`).join("")}
+        <div class="center"></div>
+      </div>
+    `;
+  }
+
+  // Variety 1: Tulip-ish (3 big petals)
+  if (s.variety === 1) {
+    return `
+      <div class="bloom tulip" title="${title}">
+        <div class="petal t1"></div>
+        <div class="petal t2"></div>
+        <div class="petal t3"></div>
+        <div class="center"></div>
+      </div>
+    `;
+  }
+
+  // Variety 2: Starflower (5 petals, pointier)
+  return `
+    <div class="bloom star" title="${title}">
+      ${Array.from({ length: 5 }, (_, i) => `<div class="petal s${i+1}"></div>`).join("")}
+      <div class="center"></div>
+    </div>
+  `;
+}
+
   function render(){
     // Clear existing flowers
     garden.querySelectorAll('.flower').forEach(el => el.remove());
@@ -192,8 +304,10 @@
       el.style.setProperty('--c2', s.c2);
       el.dataset.id = s.id;
 
+      el.className = `flower stage-${stageOf(s)} ${s.picked ? 'picked' : ''} v${s.variety}`;
+
       el.innerHTML = `
-        <div class="head" title="${escapeHtml(s.note || '')}"></div>
+        ${bloomHTML(s)}
         <div class="stem"></div>
       `;
 
@@ -261,12 +375,15 @@
       created: Date.now(),
       c1, c2,
       note: (noteInput.value || '').trim(),
-      picked: false
+      picked: false,
+      variety: Math.floor(Math.random() * 3) // 0, 1, or 2
     };
     noteInput.value = '';
     seeds.push(seed);
     persist();
     render();
+
+    
   });
 
   document.getElementById('saveBouquetBtn').addEventListener('click', () => {
